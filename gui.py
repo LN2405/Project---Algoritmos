@@ -1,41 +1,19 @@
 import importlib.util
-import io
 import os
-import sys
-from contextlib import redirect_stdout
 from datetime import datetime
 import tkinter as tk
 from tkinter import messagebox
 from tkinter import ttk
 from tkinter.scrolledtext import ScrolledText
 
-BASE_DIR = os.path.dirname(__file__)
+import insertion_sort
+import listas_dobles
+import pilas_historial
 
-
-def load_module_from_path(name, filename):
-    path = os.path.join(BASE_DIR, filename)
-    spec = importlib.util.spec_from_file_location(name, path)
-    module = importlib.util.module_from_spec(spec)
-    with redirect_stdout(io.StringIO()):
-        spec.loader.exec_module(module)
-    return module
-
-try:
-    insertion_mod = load_module_from_path("insertion_sort_module", "insertion_sort.py")
-    heap_mod = load_module_from_path("min_heap_module", "min-heap.py")
-    historial_mod = load_module_from_path("pilas_historial_module", "pilas_historial.py")
-except Exception as exc:
-    print("No se pudo cargar uno o más módulos del proyecto:", exc)
-    sys.exit(1)
-
-
-class SortProducto:
-    def __init__(self, nombre, fecha_vencimiento):
-        self.nombre = nombre
-        self.fecha_vencimiento = datetime.strptime(fecha_vencimiento, "%Y-%m-%d")
-
-    def __repr__(self):
-        return f"{self.nombre} - {self.fecha_vencimiento.date()}"
+RUTA_HEAP = os.path.join(os.path.dirname(__file__), "min-heap.py")
+SPEC_HEAP = importlib.util.spec_from_file_location("min_heap", RUTA_HEAP)
+heap_mod = importlib.util.module_from_spec(SPEC_HEAP)
+SPEC_HEAP.loader.exec_module(heap_mod)
 
 
 class ProyectoGUI(tk.Tk):
@@ -45,12 +23,12 @@ class ProyectoGUI(tk.Tk):
         self.geometry("900x520")
         self.resizable(False, False)
 
+        self.inventario = listas_dobles.ListaInventario()
         self.heap = heap_mod.MinHeapAlimentos()
-        self.historial = historial_mod.PilaHistorial()
-        self.sort_items = []
+        self.historial = pilas_historial.PilaHistorial()
 
         self.create_widgets()
-        self.log("Interfaz lista. Registra alimentos y usa heap e historial.")
+        self.log("Sistema listo.")
 
     def create_widgets(self):
         form_frame = ttk.LabelFrame(self, text="Registrar alimento")
@@ -58,34 +36,29 @@ class ProyectoGUI(tk.Tk):
 
         labels = ["Nombre", "Cantidad", "Lugar", "Fecha de vencimiento"]
         self.entries = {}
-        for idx, label_text in enumerate(labels):
-            label = ttk.Label(form_frame, text=label_text)
-            label.place(x=10, y=12 + idx * 42)
+
+        for idx, texto in enumerate(labels):
+            ttk.Label(form_frame, text=texto).place(x=10, y=12 + idx * 42)
             entry = ttk.Entry(form_frame)
             entry.place(x=150, y=10 + idx * 42, width=240)
-            self.entries[label_text] = entry
+            self.entries[texto] = entry
 
-        boton_agregar = ttk.Button(form_frame, text="Agregar alimento", command=self.add_food)
-        boton_agregar.place(x=10, y=180, width=380)
+        ttk.Button(form_frame, text="Agregar alimento", command=self.add_food).place(
+            x=10, y=180, width=380
+        )
 
         actions_frame = ttk.LabelFrame(self, text="Acciones")
         actions_frame.place(x=16, y=248, width=420, height=248)
 
-        ttk.Button(actions_frame, text="Próximo a vencer", command=self.show_next).place(x=10, y=12, width=190)
+        ttk.Button(actions_frame, text="Proximo a vencer", command=self.show_next).place(x=10, y=12, width=190)
         ttk.Button(actions_frame, text="Listar heap", command=self.show_heap).place(x=220, y=12, width=190)
         ttk.Button(actions_frame, text="Ordenar por fecha", command=self.sort_products).place(x=10, y=56, width=190)
         ttk.Button(actions_frame, text="Mostrar historial", command=self.show_history).place(x=220, y=56, width=190)
-        ttk.Button(actions_frame, text="Quitar acción", command=self.pop_history).place(x=10, y=100, width=400)
-        ttk.Button(actions_frame, text="Limpiar log", command=lambda: self.log_text.delete("1.0", tk.END)).place(x=10, y=144, width=400)
+        ttk.Button(actions_frame, text="Quitar accion", command=self.pop_history).place(x=10, y=100, width=400)
+        ttk.Button(actions_frame, text="Limpiar log", command=self.clear_log).place(x=10, y=144, width=400)
 
         self.log_text = ScrolledText(self, wrap=tk.WORD, state="disabled", font=("Consolas", 11))
         self.log_text.place(x=452, y=16, width=424, height=480)
-
-    def log(self, mensaje):
-        self.log_text.config(state="normal")
-        self.log_text.insert(tk.END, f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - {mensaje}\n")
-        self.log_text.see(tk.END)
-        self.log_text.config(state="disabled")
 
     def add_food(self):
         nombre = self.entries["Nombre"].get().strip()
@@ -98,68 +71,81 @@ class ProyectoGUI(tk.Tk):
             return
 
         try:
-            cantidad = int(cantidad)
+            self.inventario.insertar(nombre, cantidad, lugar, fecha)
+            self.heap.insertar_alimento(nombre, cantidad, lugar, fecha)
         except ValueError:
-            messagebox.showerror("Valor inválido", "La cantidad debe ser un número entero.")
+            messagebox.showerror("Dato invalido", "Cantidad numerica y fecha AAAA-MM-DD.")
             return
 
-        try:
-            datetime.strptime(fecha, "%Y-%m-%d")
-        except ValueError:
-            messagebox.showerror("Formato inválido", "La fecha debe ser AAAA-MM-DD.")
-            return
-
-        self.heap.insertar_alimento(nombre, cantidad, lugar, fecha)
-        self.sort_items.append(SortProducto(nombre, fecha))
         self.historial.push(f"Agregado alimento {nombre} ({cantidad})")
         self.log(f"Alimento agregado: {nombre} ({cantidad}) - vence {fecha} en {lugar}")
-        self.clear_fields()
 
-    def clear_fields(self):
         for entry in self.entries.values():
             entry.delete(0, tk.END)
 
     def show_next(self):
-        proximo = self.heap.ver_proximo_vencer()
-        if proximo is None:
+        alimento = self.heap.ver_proximo_vencer()
+
+        if alimento is None:
             self.log("No hay alimentos registrados.")
-        elif isinstance(proximo, str):
-            self.log(proximo)
-        else:
-            self.log(f"Próximo a vencer: {proximo['nombre']} - vence {proximo['fecha'].strftime('%Y-%m-%d')} ({proximo['lugar']})")
+            return
+
+        self.log(
+            f"Proximo a vencer: {alimento['nombre']} - "
+            f"vence {alimento['fecha'].strftime('%Y-%m-%d')} ({alimento['lugar']})"
+        )
 
     def show_heap(self):
-        if not self.heap.heap:
-            self.log("Heap vacío.")
+        alimentos = self.heap.mostrar()
+
+        if not alimentos:
+            self.log("Heap vacio.")
             return
+
         self.log("Alimentos en heap:")
-        for item in self.heap.heap:
-            self.log(f"{item['nombre']} ({item['cantidad']}) - vence {item['fecha'].strftime('%Y-%m-%d')} en {item['lugar']}")
+        for alimento in alimentos:
+            self.log(alimento)
 
     def sort_products(self):
-        if not self.sort_items:
+        productos = insertion_sort.insertion_sort(self.inventario.obtener_productos())
+
+        if not productos:
             self.log("No hay productos para ordenar.")
             return
-        ordenados = insertion_mod.insertion_sort(self.sort_items)
+
         self.log("Productos ordenados por vencimiento:")
-        for producto in ordenados:
+        for producto in productos:
             self.log(f"{producto.nombre} - {producto.fecha_vencimiento.date()}")
 
     def show_history(self):
-        historial = self.historial.mostrar()
-        if not historial:
-            self.log("Historial vacío.")
+        acciones = self.historial.mostrar()
+
+        if not acciones:
+            self.log("Historial vacio.")
             return
+
         self.log("Historial de acciones:")
-        for accion in historial:
+        for accion in acciones:
             self.log(f"- {accion}")
 
     def pop_history(self):
         accion = self.historial.pop()
+
         if accion is None:
-            self.log("No hay acción para quitar.")
+            self.log("No hay accion para quitar.")
         else:
-            self.log(f"Acción eliminada: {accion}")
+            self.log(f"Accion eliminada: {accion}")
+
+    def clear_log(self):
+        self.log_text.config(state="normal")
+        self.log_text.delete("1.0", tk.END)
+        self.log_text.config(state="disabled")
+
+    def log(self, mensaje):
+        self.log_text.config(state="normal")
+        self.log_text.insert(tk.END, f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')} - {mensaje}\n")
+        self.log_text.see(tk.END)
+        self.log_text.config(state="disabled")
 
 
 if __name__ == "__main__":
