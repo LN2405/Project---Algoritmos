@@ -22,33 +22,39 @@ class ListaInventario:
         self.fin = None
 
     def insertar(self, nombre, cantidad, lugar, fecha_vencimiento):
+
         producto = Producto(nombre, cantidad, lugar, fecha_vencimiento)
         nuevo = NodoProducto(producto)
 
         if self.inicio is None:
             self.inicio = nuevo
             self.fin = nuevo
+
         else:
             self.fin.siguiente = nuevo
             nuevo.anterior = self.fin
             self.fin = nuevo
 
-        return producto
-
     def eliminar(self, nombre):
+
         actual = self.inicio
 
         while actual is not None:
+
             if actual.producto.nombre.lower() == nombre.lower():
+
                 if actual == self.inicio and actual == self.fin:
                     self.inicio = None
                     self.fin = None
+
                 elif actual == self.inicio:
                     self.inicio = actual.siguiente
                     self.inicio.anterior = None
+
                 elif actual == self.fin:
                     self.fin = actual.anterior
                     self.fin.siguiente = None
+
                 else:
                     actual.anterior.siguiente = actual.siguiente
                     actual.siguiente.anterior = actual.anterior
@@ -59,40 +65,17 @@ class ListaInventario:
 
         return False
 
-    def buscar(self, nombre):
-        actual = self.inicio
-
-        while actual is not None:
-            if actual.producto.nombre.lower() == nombre.lower():
-                return actual.producto
-
-            actual = actual.siguiente
-
-        return None
-
     def mostrar(self):
-        if self.inicio is None:
-            return ["Inventario vacio."]
 
-        productos = []
         actual = self.inicio
 
         while actual is not None:
+
             producto = actual.producto
-            productos.append(
-                f"{producto.nombre} ({producto.cantidad}) - "
-                f"vence {producto.fecha_vencimiento.date()} en {producto.lugar}"
+
+            print(
+                f"{producto.nombre} - "
+                f"{producto.fecha_vencimiento.date()}"
             )
+
             actual = actual.siguiente
-
-        return productos
-
-    def obtener_productos(self):
-        productos = []
-        actual = self.inicio
-
-        while actual is not None:
-            productos.append(actual.producto)
-            actual = actual.siguiente
-
-        return productos
