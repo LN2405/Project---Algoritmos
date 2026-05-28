@@ -41,6 +41,7 @@ class ProyectoGUI(tk.Tk):
             ttk.Label(form_frame, text=texto).place(x=10, y=12 + idx * 42)
             entry = ttk.Entry(form_frame)
             entry.place(x=150, y=10 + idx * 42, width=240)
+            entry.bind("<Return>", self.add_food)
             self.entries[texto] = entry
 
         ttk.Button(form_frame, text="Agregar alimento", command=self.add_food).place(
@@ -60,7 +61,20 @@ class ProyectoGUI(tk.Tk):
         self.log_text = ScrolledText(self, wrap=tk.WORD, state="disabled", font=("Consolas", 11))
         self.log_text.place(x=452, y=16, width=424, height=480)
 
-    def add_food(self):
+    def clear_entries(self):
+        for entry in self.entries.values():
+            entry.delete(0, tk.END)
+
+    def clear_log_text(self):
+        self.log_text.config(state="normal")
+        self.log_text.delete("1.0", tk.END)
+        self.log_text.config(state="disabled")
+
+    def prepare_action_view(self):
+        self.clear_entries()
+        self.clear_log_text()
+
+    def add_food(self, event=None):
         nombre = self.entries["Nombre"].get().strip()
         cantidad = self.entries["Cantidad"].get().strip()
         lugar = self.entries["Lugar"].get().strip()
@@ -80,10 +94,10 @@ class ProyectoGUI(tk.Tk):
         self.historial.push(f"Agregado alimento {nombre} ({cantidad})")
         self.log(f"Alimento agregado: {nombre} ({cantidad}) - vence {fecha} en {lugar}")
 
-        for entry in self.entries.values():
-            entry.delete(0, tk.END)
+        self.clear_entries()
 
     def show_next(self):
+        self.prepare_action_view()
         alimento = self.heap.ver_proximo_vencer()
 
         if alimento is None:
@@ -96,6 +110,7 @@ class ProyectoGUI(tk.Tk):
         )
 
     def show_heap(self):
+        self.prepare_action_view()
         alimentos = self.heap.mostrar()
 
         if not alimentos:
@@ -107,6 +122,7 @@ class ProyectoGUI(tk.Tk):
             self.log(alimento)
 
     def sort_products(self):
+        self.prepare_action_view()
         productos = insertion_sort.insertion_sort(self.inventario.obtener_productos())
 
         if not productos:
@@ -118,6 +134,7 @@ class ProyectoGUI(tk.Tk):
             self.log(f"{producto.nombre} - {producto.fecha_vencimiento.date()}")
 
     def show_history(self):
+        self.prepare_action_view()
         acciones = self.historial.mostrar()
 
         if not acciones:
@@ -129,6 +146,7 @@ class ProyectoGUI(tk.Tk):
             self.log(f"- {accion}")
 
     def pop_history(self):
+        self.prepare_action_view()
         accion = self.historial.pop()
 
         if accion is None:
@@ -137,9 +155,8 @@ class ProyectoGUI(tk.Tk):
             self.log(f"Accion eliminada: {accion}")
 
     def clear_log(self):
-        self.log_text.config(state="normal")
-        self.log_text.delete("1.0", tk.END)
-        self.log_text.config(state="disabled")
+        self.clear_entries()
+        self.clear_log_text()
 
     def log(self, mensaje):
         self.log_text.config(state="normal")
