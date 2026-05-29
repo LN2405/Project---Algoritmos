@@ -1,23 +1,11 @@
-from datetime import datetime
-
 class MinHeapAlimentos:
 
     def __init__(self):
         self.heap = []
 
-    def insertar_alimento(self, nombre, cantidad, lugar, fecha_vencimiento):
+    def insertar_alimento(self, producto):
 
-        fecha = datetime.strptime(fecha_vencimiento, "%Y-%m-%d")
-
-        alimento = {
-            "nombre": nombre,
-            "cantidad": cantidad,
-            "lugar": lugar,
-            "fecha": fecha
-        }
-
-        self.heap.append(alimento)
-
+        self.heap.append(producto)
         self.heapify_up(len(self.heap) - 1)
 
     def heapify_up(self, index):
@@ -26,49 +14,94 @@ class MinHeapAlimentos:
 
             parent = (index - 1) // 2
 
-            if self.heap[index]["fecha"] < self.heap[parent]["fecha"]:
+            if self.heap[index].fecha_vencimiento < self.heap[parent].fecha_vencimiento:
 
-                self.heap[index], self.heap[parent] = \
-                self.heap[parent], self.heap[index]
+                self.heap[index], self.heap[parent] = (
+                    self.heap[parent],
+                    self.heap[index]
+                )
 
                 index = parent
 
             else:
                 break
 
+    def heapify_down(self, index):
+
+        size = len(self.heap)
+
+        while True:
+
+            menor = index
+            izquierdo = 2 * index + 1
+            derecho = 2 * index + 2
+
+            if izquierdo < size and self.heap[izquierdo].fecha_vencimiento < self.heap[menor].fecha_vencimiento:
+                menor = izquierdo
+
+            if derecho < size and self.heap[derecho].fecha_vencimiento < self.heap[menor].fecha_vencimiento:
+                menor = derecho
+
+            if menor == index:
+                break
+
+            self.heap[index], self.heap[menor] = self.heap[menor], self.heap[index]
+            index = menor
+
+    def eliminar_alimento(self, nombre):
+
+        for index, alimento in enumerate(self.heap):
+
+            if alimento.nombre.lower() == nombre.lower():
+
+                self.heap[index] = self.heap[-1]
+                self.heap.pop()
+
+                if index < len(self.heap):
+                    self.heapify_down(index)
+                    self.heapify_up(index)
+
+                return True
+
+        return False
+
     def ver_proximo_vencer(self):
 
         if not self.heap:
-            return "No hay alimentos registrados"
+            return None
 
         return self.heap[0]
 
-    def mostrar(self):
+    def extraer_proximo_vencer(self):
 
         if not self.heap:
-            print("No hay alimentos registrados")
-            return
+            return None
 
-        for alimento in self.heap:
+        if len(self.heap) == 1:
+            return self.heap.pop()
 
-            print(
-                alimento["nombre"],
-                "- cantidad:", alimento["cantidad"],
-                "- lugar:", alimento["lugar"],
-                "- vence:",
-                alimento["fecha"].strftime("%Y-%m-%d")
-            )
+        raiz = self.heap[0]
+        self.heap[0] = self.heap.pop()
+        self.heapify_down(0)
+        return raiz
 
-sistema = MinHeapAlimentos()
+    def extraer_por_fecha(self, fecha_limite):
 
-sistema.insertar_alimento("Leche", 20, "Supermercado Plaza", "2026-05-25")
+        retirados = []
 
-sistema.insertar_alimento("Pan", 15, "Restaurante Sol", "2026-05-20")
+        while True:
+            alimento = self.ver_proximo_vencer()
 
-sistema.insertar_alimento("Queso", 10, "Market Food", "2026-05-22")
+            if alimento is None:
+                break
 
-print("Alimento que vencerá primero:")
-print(sistema.ver_proximo_vencer())
+            fecha_alimento = alimento.fecha_vencimiento.date()
 
-print("\nLista de alimentos:")
-sistema.mostrar()
+            if fecha_alimento > fecha_limite:
+                break
+
+            retirados.append(self.extraer_proximo_vencer())
+ 
+        return retirados
+
+
