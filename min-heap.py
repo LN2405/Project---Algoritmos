@@ -59,3 +59,16 @@ class MinHeapAlimentos:
                 alimento["fecha"].strftime("%Y-%m-%d")
             )
 
+sistema = MinHeapAlimentos()
+
+sistema.insertar_alimento("Leche", 20, "Supermercado Plaza", "2026-05-25")
+
+sistema.insertar_alimento("Pan", 15, "Restaurante Sol", "2026-05-20")
+
+sistema.insertar_alimento("Queso", 10, "Market Food", "2026-05-22")
+
+print("Alimento que vencerá primero:")
+print(sistema.ver_proximo_vencer())
+
+print("\nLista de alimentos:")
+sistema.mostrar()
